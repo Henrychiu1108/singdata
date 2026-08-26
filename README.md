@@ -46,16 +46,35 @@ aggregate cache for correctness.
 
 Docker Desktop must be running.
 
+PowerShell:
+
 ```powershell
 Copy-Item examples\events.log data\events.log
 docker compose up --build
 ```
 
+Git Bash:
+
+```bash
+cp examples/events.log data/events.log
+docker compose up --build
+```
+
 The API starts at `http://localhost:8000`; the app runs Alembic migrations
-before starting the consumer. Append more events while it is running:
+before starting the consumer. The sample log deliberately includes invalid
+records, which are recorded in `ingestion_errors` while valid events continue
+to be processed. Append a valid event while it is running:
+
+PowerShell:
 
 ```powershell
 Add-Content data\events.log 'e1004,u03,2026-08-26T10:00:20,42'
+```
+
+Git Bash:
+
+```bash
+printf '%s\n' 'e1004,u03,2026-08-26T10:00:20,42' >> data/events.log
 ```
 
 Useful endpoints:
@@ -93,12 +112,15 @@ mypy src
 pytest
 ```
 
-Pure parser/window tests need no database. PostgreSQL integration tests require
-`TEST_DATABASE_URL`; GitHub Actions provisions it automatically. For a local
-database started with Compose, use a separate test database or set:
+Without `TEST_DATABASE_URL`, `pytest` runs the pure parser/window tests and
+skips the PostgreSQL integration tests. GitHub Actions runs the full suite
+against its dedicated `events_test` database. Do not point integration tests at
+the Compose application's `events` database: the test fixture clears its tables
+before each test. To run integration tests locally, provision a separate
+PostgreSQL database and set `TEST_DATABASE_URL`, for example:
 
 ```powershell
-$env:TEST_DATABASE_URL = 'postgresql+psycopg://events:events@localhost:5432/events'
+$env:TEST_DATABASE_URL = 'postgresql+psycopg://events:events@localhost:5432/events_test'
 pytest
 ```
 
